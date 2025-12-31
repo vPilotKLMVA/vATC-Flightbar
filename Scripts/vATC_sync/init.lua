@@ -161,12 +161,22 @@ local vatsim_data = nil
 
 local function fetch_vatsim()
     if http then
+        log_msg("Fetching VATSIM data...")
         local body, code = http.request("http://data.vatsim.net/v3/vatsim-data.json")
+        log_msg("HTTP response: " .. tostring(code))
         if code == 200 and body then
             local f = io.open(SCRIPT_DIRECTORY .. CONFIG.data_file, "w")
-            if f then f:write(body); f:close() end
+            if f then
+                f:write(body)
+                f:close()
+                log_msg("VATSIM data saved (" .. #body .. " bytes)")
+            end
             return body
+        else
+            log_msg("HTTP FAILED: code=" .. tostring(code))
         end
+    else
+        log_msg("HTTP module not available!")
     end
     return nil
 end
