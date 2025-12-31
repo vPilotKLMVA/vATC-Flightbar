@@ -1,0 +1,8 @@
+2025-03-04 18:27:33 [INFO]: Log file cleared.
+2025-03-04 18:27:33 [INFO]: Q-Learning Agent initialized with Q-Table.
+2025-03-04 18:27:33 [INFO]: Dataref 'scattering_on' found.
+2025-03-04 18:27:33 [INFO]: Dataref 'visibility_framerate_ratio' found.
+2025-03-04 18:27:33 [INFO]: Dataref 'HDR_on' found.
+2025-03-04 18:27:33 [INFO]: Dataref 'rendering_res' found.
+2025-03-04 18:27:33 [INFO]: Dataref 'LOD_bias_rat' found.
+2025-03-04 18:27:33 [INFO]: Dataref 'csm_split_exterior' found.
