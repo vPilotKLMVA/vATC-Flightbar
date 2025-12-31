@@ -1,0 +1,108 @@
+-- === Automatische Log.txt backup naar X-Plane root ===
+
+-- Hulpfuncties
+local function norm(path)
+    path = path:gsub("\\", "/")
+    if path:sub(-1) ~= "/" then path = path .. "/" end
+    return path
+end
+
+local function parent(dir)
+    dir = dir:gsub("/+$", "")
+    local up = dir:match("(.+)/[^/]+$")
+    return up and (up .. "/") or nil
+end
+
+local function file_exists(p)
+    local f = io.open(p, "r")
+    if f then f:close() return true end
+    return false
+end
+
+-- Vind scriptmap
+local src = debug.getinfo(1, "S").source or ""
+if src:sub(1,1) == "@" then src = src:sub(2) end
+local scriptDir = norm((src:match("(.*/)") or "./"))
+
+-- Zoek X-Plane root
+local probe = scriptDir
+local xplaneRoot = nil
+for _ = 1, 8 do
+    if file_exists(probe .. "Log.txt")
+       or file_exists(probe .. "X-Plane.exe")
+       or file_exists(probe .. "X-Plane.app/Contents/MacOS/X-Plane") then
+        xplaneRoot = probe
+        break
+    end
+    local up = parent(probe)
+    if not up then break end
+    probe = up
+end
+
+-- Fallback
+if not xplaneRoot then
+    local guess = (scriptDir:match("(.-)/.-/.-/.-/"))
+    xplaneRoot = norm((guess and guess ~= "" and guess) or "./")
+end
+
+local destPath         = xplaneRoot
+local backupPath       = xplaneRoot
+local logBestandsnaam  = "Log.txt"
+
+-- Maak backup met datum/tijd in naam
+local logBestand = io.open(destPath .. logBestandsnaam, "r")
+if logBestand then
+    logBestand:close()
+
+    -- Verzamel bestaande backups (cross-platform)
+    local backupLijst = {}
+
+    local isWindows = package.config:sub(1,1) == "\\"
+    local function to_cmd_path(p)
+        return isWindows and p:gsub("/", "\\") or p
+    end
+
+    local listCmd
+    if isWindows then
+        -- /b bare, /a-d files only
+        listCmd = ('dir /b /a-d "%s"'):format(to_cmd_path(backupPath))
+    else
+        listCmd = ('ls -1 "%s"'):format(backupPath)
+    end
+
+    local p = io.popen and io.popen(listCmd) or nil
+    if p then
+        for bestand in p:lines() do
+            if bestand:match("^Log_%d%d%d%d%-%d%d%-%d%d_%d%d%-%d%d%-%d%d%.txt$") then
+                table.insert(backupLijst, bestand)
+            end
+        end
+        p:close()
+    else
+        -- Geen popen: we kunnen niet opruimen, maar we kunnen nog wel een backup maken
+        -- (laat backupLijst leeg zodat er niets verwijderd wordt)
+    end
+
+    table.sort(backupLijst)
+    if #backupLijst > 3 then
+        for i = 1, #backupLijst - 3 do
+            os.remove(backupPath .. backupLijst[i])
+        end
+    end
+
+    local backupBestandsnaam = "Log_" .. os.date("%Y-%m-%d_%H-%M-%S") .. ".txt"
+    -- Probeer te hernoemen (snel). Als dat faalt (b.v. bestand in gebruik), probeer kopie.
+    local ok, err = os.rename(destPath .. logBestandsnaam, backupPath .. backupBestandsnaam)
+    if not ok then
+        -- Fall-back: kopieer inhoud
+        local inF = io.open(destPath .. logBestandsnaam, "rb")
+        if inF then
+            local outF = io.open(backupPath .. backupBestandsnaam, "wb")
+            if outF then
+                outF:write(inF:read("*a"))
+                outF:close()
+            end
+            inF:close()
+        end
+    end
+end
