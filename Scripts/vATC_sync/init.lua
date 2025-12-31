@@ -313,6 +313,18 @@ local function extract_xml(content, tag)
     return nil
 end
 
+-- Extract from nested XML (SimBrief OFP format)
+local function extract_xml_nested(content, parent, tag)
+    if not content or not parent or not tag then return nil end
+    -- Find parent section first
+    local parent_pattern = "<" .. parent .. ">(.-)</" .. parent .. ">"
+    local parent_content = content:match(parent_pattern)
+    if parent_content then
+        return extract_xml(parent_content, tag)
+    end
+    return nil
+end
+
 local function load_xml()
     local fms_path = SYSTEM_DIRECTORY and (SYSTEM_DIRECTORY .. "Output/FMS plans/") or ""
     if fms_path == "" then
@@ -334,19 +346,26 @@ local function load_xml()
 
             if name:match("%.xml$") then
                 -- Parse XML (SimBrief OFP format)
-                flightplan.origin = extract_xml(content, "origin_icao") or extract_xml(content, "departure") or ""
-                flightplan.destination = extract_xml(content, "destination_icao") or extract_xml(content, "arrival") or ""
+                -- Try nested format first (SimBrief), then flat format
+                flightplan.origin = extract_xml_nested(content, "origin", "icao_code") or extract_xml(content, "origin_icao") or ""
+                flightplan.destination = extract_xml_nested(content, "destination", "icao_code") or extract_xml(content, "destination_icao") or ""
                 vatsim_fp.departure = flightplan.origin
                 vatsim_fp.arrival = flightplan.destination
-                vatsim_fp.sid = extract_xml(content, "sid_id") or extract_xml(content, "sid") or ""
-                vatsim_fp.star = extract_xml(content, "star_id") or extract_xml(content, "star") or ""
-                vatsim_fp.dep_rwy = extract_xml(content, "origin_rwy") or extract_xml(content, "departure_runway") or ""
-                vatsim_fp.approach = extract_xml(content, "approach") or extract_xml(content, "arr_rwy") or ""
+                vatsim_fp.sid = extract_xml_nested(content, "general", "sid_ident") or extract_xml(content, "sid_id") or ""
+                vatsim_fp.star = extract_xml_nested(content, "general", "star_ident") or extract_xml(content, "star_id") or ""
+                vatsim_fp.dep_rwy = extract_xml_nested(content, "origin", "plan_rwy") or extract_xml(content, "origin_rwy") or ""
+                vatsim_fp.approach = extract_xml_nested(content, "destination", "plan_rwy") or extract_xml(content, "arr_rwy") or ""
 
-                -- Try to get callsign from XML
-                local xml_callsign = extract_xml(content, "callsign") or extract_xml(content, "atc_callsign")
-                if xml_callsign then
-                    flightplan.callsign = xml_callsign
+                -- Try to get callsign from XML (icao_airline + flight_number)
+                local airline = extract_xml_nested(content, "general", "icao_airline") or ""
+                local fltnr = extract_xml_nested(content, "general", "flight_number") or ""
+                if airline ~= "" and fltnr ~= "" then
+                    flightplan.callsign = airline .. fltnr
+                else
+                    local xml_callsign = extract_xml(content, "callsign") or extract_xml(content, "atc_callsign")
+                    if xml_callsign then
+                        flightplan.callsign = xml_callsign
+                    end
                 end
             else
                 -- Parse FMS format
