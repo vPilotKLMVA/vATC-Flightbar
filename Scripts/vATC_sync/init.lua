@@ -454,32 +454,16 @@ local function update()
     local pilot = nil
     local has_prefile = false
 
-    -- Log position for debugging
-    if do_log then
-        log_msg("UPDATE: My position: lat=" .. string.format("%.4f", xp_latitude or 0) .. " lon=" .. string.format("%.4f", xp_longitude or 0))
-        log_msg("UPDATE: Callsign mode: " .. tostring(CONFIG.callsign))
-        log_msg("UPDATE: Pilots in data: " .. tostring(data.pilots and #data.pilots or 0))
-        log_msg("UPDATE: Controllers nearby: " .. tostring(#atc.nearby))
-    end
-
     -- Auto-detect pilot by position, or use configured callsign
     if CONFIG.callsign == "AUTO" then
         pilot = find_pilot_by_position(data)
         if pilot then
             active_callsign = pilot.callsign
-            if do_log then log_msg("UPDATE: Found by position: " .. pilot.callsign) end
-        else
-            if do_log then log_msg("UPDATE: No pilot found at position") end
         end
     else
         active_callsign = CONFIG.callsign
         pilot = find_pilot(data, active_callsign)
         has_prefile = find_prefile(data, active_callsign)
-        if do_log then
-            log_msg("UPDATE: Looking for callsign: " .. active_callsign)
-            log_msg("UPDATE: Pilot found: " .. tostring(pilot ~= nil))
-            log_msg("UPDATE: Prefile found: " .. tostring(has_prefile))
-        end
     end
 
     if pilot then
@@ -489,20 +473,17 @@ local function update()
         state.callsign = pilot.callsign
         state.squawk = pilot.transponder or UTILS.num_to_squawk(xp_transponder or 2000)
 
-        if do_log then
-            log_msg("STATUS: ONLINE (green) - " .. pilot.callsign)
-            log_msg("  Pilot lat=" .. string.format("%.4f", pilot.latitude or 0) .. " lon=" .. string.format("%.4f", pilot.longitude or 0))
-        end
-
         if pilot.flight_plan then
             vatsim_fp.departure = pilot.flight_plan.departure or ""
             vatsim_fp.arrival = pilot.flight_plan.arrival or ""
-            if do_log then
-                log_msg("  Flight plan: " .. vatsim_fp.departure .. " -> " .. vatsim_fp.arrival)
-            end
         end
 
         atc.fir = atc.current and atc.current.callsign or "VATSIM"
+
+        if do_log then
+            log_msg("ONLINE: " .. pilot.callsign .. " | " .. vatsim_fp.departure .. "->" .. vatsim_fp.arrival)
+            last_log_time = now
+        end
 
     elseif has_prefile then
         -- PREFILED (orange)
@@ -510,13 +491,17 @@ local function update()
         state.connected = false
         state.callsign = active_callsign
         atc.fir = "PREFILED"
-        if do_log then log_msg("STATUS: PREFILED (orange) - " .. active_callsign) end
+        if do_log then
+            log_msg("PREFILED: " .. active_callsign)
+            last_log_time = now
+        end
     else
         -- OFFLINE (red)
-        if do_log then log_msg("STATUS: OFFLINE (red)") end
+        if do_log then
+            log_msg("OFFLINE")
+            last_log_time = now
+        end
     end
-
-    if do_log then last_log_time = now end
 end
 
 -- ============================================================================
