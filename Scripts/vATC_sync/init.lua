@@ -5,9 +5,38 @@
 
 local script_dir = debug.getinfo(1, "S").source:match("@(.*[/\\])") or "./"
 
--- Logging
+-- Logging to file and console
+local log_file_path = nil
+local function init_log_file()
+    if SCRIPT_DIRECTORY then
+        log_file_path = SCRIPT_DIRECTORY .. "vATC_sync.log"
+    end
+end
+
 local function log_msg(msg)
+    local timestamp = os.date("!%Y-%m-%d %H:%M:%S")
+    local line = "[" .. timestamp .. "] " .. tostring(msg)
     logMsg("vATC: " .. tostring(msg))
+    -- Write to file
+    if log_file_path then
+        local f = io.open(log_file_path, "a")
+        if f then
+            f:write(line .. "\n")
+            f:close()
+        end
+    end
+end
+
+local function log_data(label, data)
+    if type(data) == "table" then
+        log_msg(label .. ": {")
+        for k, v in pairs(data) do
+            log_msg("  " .. tostring(k) .. " = " .. tostring(v))
+        end
+        log_msg("}")
+    else
+        log_msg(label .. ": " .. tostring(data))
+    end
 end
 
 log_msg("Loading from: " .. script_dir)
@@ -382,7 +411,11 @@ local function update_progress()
     end
 end
 
+local last_log_time = 0
 local function update()
+    local now = os.time()
+    local do_log = (now - last_log_time) >= 30  -- Log every 30 seconds
+
     -- Default: OFFLINE (red) - use X-Plane local data
     state.vatsim_status = "offline"
     state.connected = false
@@ -407,7 +440,13 @@ local function update()
     local content = read_vatsim()
     local data = parse_vatsim(content)
 
-    if not data then return end
+    if not data then
+        if do_log then
+            log_msg("UPDATE: No VATSIM data available")
+            last_log_time = now
+        end
+        return
+    end
 
     atc.controllers = parse_controllers(data)
     update_nearby()
@@ -415,16 +454,32 @@ local function update()
     local pilot = nil
     local has_prefile = false
 
+    -- Log position for debugging
+    if do_log then
+        log_msg("UPDATE: My position: lat=" .. string.format("%.4f", xp_latitude or 0) .. " lon=" .. string.format("%.4f", xp_longitude or 0))
+        log_msg("UPDATE: Callsign mode: " .. tostring(CONFIG.callsign))
+        log_msg("UPDATE: Pilots in data: " .. tostring(data.pilots and #data.pilots or 0))
+        log_msg("UPDATE: Controllers nearby: " .. tostring(#atc.nearby))
+    end
+
     -- Auto-detect pilot by position, or use configured callsign
     if CONFIG.callsign == "AUTO" then
         pilot = find_pilot_by_position(data)
         if pilot then
             active_callsign = pilot.callsign
+            if do_log then log_msg("UPDATE: Found by position: " .. pilot.callsign) end
+        else
+            if do_log then log_msg("UPDATE: No pilot found at position") end
         end
     else
         active_callsign = CONFIG.callsign
         pilot = find_pilot(data, active_callsign)
         has_prefile = find_prefile(data, active_callsign)
+        if do_log then
+            log_msg("UPDATE: Looking for callsign: " .. active_callsign)
+            log_msg("UPDATE: Pilot found: " .. tostring(pilot ~= nil))
+            log_msg("UPDATE: Prefile found: " .. tostring(has_prefile))
+        end
     end
 
     if pilot then
@@ -433,11 +488,18 @@ local function update()
         state.connected = true
         state.callsign = pilot.callsign
         state.squawk = pilot.transponder or UTILS.num_to_squawk(xp_transponder or 2000)
-        log_msg("Status: ONLINE (green) - " .. pilot.callsign)
+
+        if do_log then
+            log_msg("STATUS: ONLINE (green) - " .. pilot.callsign)
+            log_msg("  Pilot lat=" .. string.format("%.4f", pilot.latitude or 0) .. " lon=" .. string.format("%.4f", pilot.longitude or 0))
+        end
 
         if pilot.flight_plan then
             vatsim_fp.departure = pilot.flight_plan.departure or ""
             vatsim_fp.arrival = pilot.flight_plan.arrival or ""
+            if do_log then
+                log_msg("  Flight plan: " .. vatsim_fp.departure .. " -> " .. vatsim_fp.arrival)
+            end
         end
 
         atc.fir = atc.current and atc.current.callsign or "VATSIM"
@@ -448,11 +510,13 @@ local function update()
         state.connected = false
         state.callsign = active_callsign
         atc.fir = "PREFILED"
-        log_msg("Status: PREFILED (orange) - " .. active_callsign)
+        if do_log then log_msg("STATUS: PREFILED (orange) - " .. active_callsign) end
     else
         -- OFFLINE (red)
-        log_msg("Status: OFFLINE (red)")
+        if do_log then log_msg("STATUS: OFFLINE (red)") end
     end
+
+    if do_log then last_log_time = now end
 end
 
 -- ============================================================================
@@ -535,7 +599,7 @@ function vatc_sync_draw()
     if raw_freq > 0 then
         freq = UTILS.xplane_to_freq(raw_freq)
     end
-    local atc_type = atc.current and atc.current.type or "---"
+    local atc_type = atc.current and atc.current.type or "UNICOM"
     local fir = atc.fir or "---"
     local fir_freq = atc.current and UTILS.format_freq(atc.current.frequency) or ""
     local next_fir = atc.next_atc and atc.next_atc.callsign or "---"
@@ -606,12 +670,19 @@ function vatc_sync_draw()
     draw_string(c[12], data_y, next_fir, crz_color[1], crz_color[2], crz_color[3])
     draw_string(c[13], data_y, dist, crz_color[1], crz_color[2], crz_color[3])
 
+    -- Weather data from X-Plane
+    local temp_str = xp_temp_c and string.format("%d°C", math.floor(xp_temp_c)) or "---"
+    local wind_str = "---"
+    if xp_wind_dir and xp_wind_speed then
+        wind_str = string.format("%03d/%d", math.floor(xp_wind_dir), math.floor(xp_wind_speed))
+    end
+
     draw_string(c[14] - 8, data_y, "|", sep_color[1], sep_color[2], sep_color[3])
     draw_string(c[14], data_y, "---", arr_color[1], arr_color[2], arr_color[3])
     draw_string(c[15], data_y, eta_str, arr_color[1], arr_color[2], arr_color[3])
     draw_string(c[16], data_y, qnh, arr_color[1], arr_color[2], arr_color[3])
-    draw_string(c[17], data_y, "---", arr_color[1], arr_color[2], arr_color[3])
-    draw_string(c[18], data_y, "---", arr_color[1], arr_color[2], arr_color[3])
+    draw_string(c[17], data_y, temp_str, arr_color[1], arr_color[2], arr_color[3])
+    draw_string(c[18], data_y, wind_str, arr_color[1], arr_color[2], arr_color[3])
     draw_string(c[19], data_y, vatsim_fp.star ~= "" and vatsim_fp.star or "---", arr_color[1], arr_color[2], arr_color[3])
     draw_string(c[20], data_y, vatsim_fp.approach ~= "" and vatsim_fp.approach or "---", arr_color[1], arr_color[2], arr_color[3])
     draw_string(c[21], data_y, dest ~= "" and dest or "---", arr_color[1], arr_color[2], arr_color[3])
@@ -638,7 +709,11 @@ function vatc_sync_toggle_wnd() display.manually_hidden = not display.manually_h
 -- ============================================================================
 -- INIT
 -- ============================================================================
-log_msg("Initializing...")
+init_log_file()
+log_msg("========================================")
+log_msg("Initializing vATC Sync...")
+log_msg("Script dir: " .. tostring(SCRIPT_DIRECTORY))
+log_msg("Log file: " .. tostring(log_file_path))
 load_xml()
 last_poll = os.time()
 last_fms_check = os.time()
