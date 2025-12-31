@@ -124,7 +124,12 @@ local vatsim_fp = {
     sid = "",
     star = "",
     dep_rwy = "",
-    approach = ""
+    arr_rwy = "",
+    approach = "",
+    dep_metar = "",
+    arr_metar = "",
+    sched_etd = 0,  -- Unix timestamp
+    sched_eta = 0   -- Unix timestamp
 }
 
 local flightplan = {
@@ -366,6 +371,19 @@ local function load_xml()
                 vatsim_fp.dep_rwy = extract_xml_nested(content, "origin", "plan_rwy") or extract_xml(content, "origin_rwy") or ""
                 vatsim_fp.approach = extract_xml_nested(content, "destination", "plan_rwy") or extract_xml(content, "arr_rwy") or ""
 
+                -- ARR runway from destination
+                vatsim_fp.arr_rwy = extract_xml_nested(content, "destination", "plan_rwy") or ""
+
+                -- METAR from origin and destination
+                vatsim_fp.dep_metar = extract_xml_nested(content, "origin", "metar") or ""
+                vatsim_fp.arr_metar = extract_xml_nested(content, "destination", "metar") or ""
+
+                -- Scheduled times (ETD/ETA) from times section
+                local sched_out = extract_xml_nested(content, "times", "sched_out")
+                local sched_in = extract_xml_nested(content, "times", "sched_in")
+                if sched_out then vatsim_fp.sched_etd = tonumber(sched_out) or 0 end
+                if sched_in then vatsim_fp.sched_eta = tonumber(sched_in) or 0 end
+
                 -- Try to get callsign from XML (icao_airline + flight_number)
                 local airline = extract_xml_nested(content, "general", "icao_airline") or ""
                 local fltnr = extract_xml_nested(content, "general", "flight_number") or ""
@@ -377,6 +395,8 @@ local function load_xml()
                         flightplan.callsign = xml_callsign
                     end
                 end
+
+                log_msg("XML: " .. flightplan.origin .. "->" .. flightplan.destination .. " CS:" .. flightplan.callsign .. " SID:" .. vatsim_fp.sid .. " STAR:" .. vatsim_fp.star)
             else
                 -- Parse FMS format
                 flightplan.origin = content:match("ADEP%s+([%w]+)") or ""
@@ -618,11 +638,19 @@ function vatc_sync_draw()
     local fir_freq = atc.current and UTILS.format_freq(atc.current.frequency) or ""
     local next_fir = atc.next_atc and atc.next_atc.callsign or "---"
     local dist = progress.dist_to_dest > 0 and string.format("%dNM", math.floor(progress.dist_to_dest)) or "---"
-    -- ETD: actual brake release time, or estimated if not yet released
-    local etd_str = progress.etd_time and os.date("!%H:%MZ", progress.etd_time) or "---"
-    -- ETA: actual brake set time at arrival, or estimated from GPS
+    -- ETD: scheduled from SimBrief, or actual brake release time
+    local etd_str = "---"
+    if vatsim_fp.sched_etd > 0 then
+        etd_str = os.date("!%H:%MZ", vatsim_fp.sched_etd)
+    elseif progress.etd_time then
+        etd_str = os.date("!%H:%MZ", progress.etd_time)
+    end
+
+    -- ETA: scheduled from SimBrief, or estimated from GPS
     local eta_str = "---"
-    if progress.eta_actual then
+    if vatsim_fp.sched_eta > 0 then
+        eta_str = os.date("!%H:%MZ", vatsim_fp.sched_eta)
+    elseif progress.eta_actual then
         eta_str = os.date("!%H:%MZ", progress.eta_actual)
     elseif progress.eta_seconds > 0 then
         eta_str = os.date("!%H:%MZ", os.time() + progress.eta_seconds)
