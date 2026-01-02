@@ -1,6 +1,6 @@
 # vATC Sync for X-Plane 12
 
-[![Version](https://img.shields.io/badge/version-1.4.2-blue.svg)](https://github.com/vPilotKLMVA/-LuaScripts-for-X-Plane-12)
+[![Version](https://img.shields.io/badge/version-1.4.5-blue.svg)](https://github.com/vPilotKLMVA/-LuaScripts-for-X-Plane-12)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![X-Plane](https://img.shields.io/badge/X--Plane-12-orange.svg)](https://www.x-plane.com/)
 
@@ -21,7 +21,9 @@
 
 ### Software
 - **X-Plane 12** (any version)
-- **FlyWithLua NG** (latest version recommended)
+- **FlyWithLua NG+** (Next Generation Plus Edition)
+  - Download: [FlyWithLua NG+ for X-Plane 12](https://forums.x-plane.org/files/file/82888-flywithlua-ng-next-generation-plus-edition-for-x-plane-12-win-lin-mac/)
+  - Required for ImGui support and floating windows
 - **PowerShell** (Windows) or **pwsh** (macOS/Linux)
 
 ### FlyWithLua Modules (Included)
@@ -30,13 +32,17 @@
 
 ## Installation
 
-See [Installation Guide](Documentation/INSTALL.md) for detailed instructions.
-
 **Quick Start:**
-1. Install FlyWithLua NG
-2. Copy vATC_sync files to `FlyWithLua/Scripts/`
-3. Configure your SimBrief Pilot ID
-4. Restart X-Plane
+1. **Install FlyWithLua NG+**
+   - Download from [X-Plane.org](https://forums.x-plane.org/files/file/82888-flywithlua-ng-next-generation-plus-edition-for-x-plane-12-win-lin-mac/)
+   - Extract to `X-Plane 12/Resources/plugins/`
+2. **Install vATC Sync**
+   - Copy `vATC_sync/` folder to `FlyWithLua/Scripts/`
+   - Copy `vATC_v1.4.5.lua` to `FlyWithLua/Scripts/`
+3. **Configure SimBrief**
+   - Start X-Plane and open vATC Settings
+   - Enter your SimBrief Pilot ID
+4. **Restart X-Plane**
 
 ## Usage
 
@@ -85,6 +91,7 @@ See [Troubleshooting Guide](Documentation/TROUBLESHOOTING.md) for details.
 
 - **Forum**: [X-Plane.org Profile](https://forums.x-plane.org/profile/422092-pilot-mcwillem/)
 - **GitHub**: [Issues & Features](https://github.com/vPilotKLMVA/-LuaScripts-for-X-Plane-12/issues)
+- **FlyWithLua NG+**: [Download Plugin](https://forums.x-plane.org/files/file/82888-flywithlua-ng-next-generation-plus-edition-for-x-plane-12-win-lin-mac/)
 
 ## License
 

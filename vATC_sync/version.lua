@@ -4,14 +4,14 @@
 --
 -- Copyright (c) 2025 vPilot KLMVA
 -- Licensed under the MIT License
--- GitHub: https://github.com/vPilotKLMVA/-LuaScripts-for-X-Plane-12
+-- GitHub: https://github.com/vPilotKLMVA/vATC-Flightbar
 --
 -- ============================================================================
 
 local VERSION = {
     major = 1,
     minor = 4,
-    patch = 2,
+    patch = 5,
     build = "2026.01.02",
 
     get = function(self)

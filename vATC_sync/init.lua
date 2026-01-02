@@ -18,10 +18,18 @@ local script_dir = debug.getinfo(1, "S").source:match("@(.*[/\\])") or "./"
 local log_file_path = nil
 local function init_log_file()
     if SCRIPT_DIRECTORY then
-        log_file_path = SCRIPT_DIRECTORY .. "vATC_sync/debug/vATC_sync.log"
+        log_file_path = SCRIPT_DIRECTORY .. "vATC_sync/debug/vATC_Log.txt"
     else
         SCRIPT_DIRECTORY = script_dir
-        log_file_path = SCRIPT_DIRECTORY .. "vATC_sync/debug/vATC_sync.log"
+        log_file_path = SCRIPT_DIRECTORY .. "vATC_sync/debug/vATC_Log.txt"
+    end
+    -- Clear log file on script reload
+    if log_file_path then
+        local f = io.open(log_file_path, "w")
+        if f then
+            f:write("=== vATC Sync Log Started ===\n")
+            f:close()
+        end
     end
 end
 
@@ -853,19 +861,18 @@ local COL_SEP = rgb_to_imgui(0.4, 0.4, 0.4, 1)
 function vatc_draw_bar()
     if display.manually_hidden or not bar_visible then return end
 
-    local sw = SCREEN_WIDTH or 1920
-    local sh = SCREEN_HEIGHT or 1080  -- FIXED: Changed from SCREEN_HIGHT to SCREEN_HEIGHT
-    local h = CONFIG.show_header_row and BAR_HEIGHT or 30
-
-    -- Position at top of screen
-    imgui.SetNextWindowPos(0, sh - h)
-    imgui.SetNextWindowSize(sw, h)
-
-    -- Borderless, no titlebar, no resize, no move
-    -- Safety: check if imgui.constant exists
-    if not imgui.constant then
+    -- Safety: check if imgui.constant exists FIRST
+    if not imgui or not imgui.constant then
         return
     end
+
+    local sw = SCREEN_WIDTH or 1920
+    local sh = SCREEN_HEIGHT or 1080
+    local h = CONFIG.show_header_row and BAR_HEIGHT or 30
+
+    -- Position at top of screen (safe now, after check)
+    imgui.SetNextWindowPos(0, sh - h)
+    imgui.SetNextWindowSize(sw, h)
 
     local window_flags = imgui.constant.WindowFlags.NoTitleBar +
                         imgui.constant.WindowFlags.NoResize +
@@ -1009,8 +1016,13 @@ end
 function vatc_draw_settings()
     if not settings_visible then return end
 
+    -- Safety: check if imgui exists FIRST
+    if not imgui or not imgui.constant then
+        return
+    end
+
     imgui.SetNextWindowSize(350, 320)
-    imgui.SetNextWindowPos((SCREEN_WIDTH or 1920) / 2 - 175, (SCREEN_HEIGHT or 1080) / 2 - 160)  -- FIXED: SCREEN_HEIGHT
+    imgui.SetNextWindowPos((SCREEN_WIDTH or 1920) / 2 - 175, (SCREEN_HEIGHT or 1080) / 2 - 160)
 
     if not imgui.Begin("vATC Sync Settings", true) then
         imgui.End()
@@ -1092,30 +1104,28 @@ function vatc_toggle_settings()
 end
 
 -- ============================================================================
--- IMGUI DRAWING CALLBACK - Called every frame (ImGui only, no OpenGL/system32)
+-- Temp file: lines 1095-1125 FIXED VERSION
+
 -- ============================================================================
+-- IMGUI DRAWING CALLBACK - ImGui only, with throttle (FlyWithLua NG+ compliant)
+-- ============================================================================
+local last_draw_time = 0
+
 function vatc_draw_windows()
-    -- Safety check: only draw if ImGui is available and ready
-    if not imgui or not SCREEN_WIDTH or not SCREEN_HEIGHT then
-        return
-    end
+    -- Throttle to max 20 FPS (REQUIRED by FlyWithLua)
+    local now = os.clock()
+    if now - last_draw_time < 0.05 then return end
+    last_draw_time = now
 
-    -- Protect with pcall to prevent crashes
-    local ok, err = pcall(function()
-        vatc_draw_bar()
-        -- Draw settings window if visible
-        if settings_visible then
-            vatc_draw_settings()
-        end
-    end)
-
-    if not ok then
-        logMsg("vATC: Draw error: " .. tostring(err))
+    -- Simple draw - NO pcall, NO heavy code
+    vatc_draw_bar()
+    if settings_visible then
+        vatc_draw_settings()
     end
 end
 
--- Register ImGui drawing callback (runs every frame)
-do_every_frame("vatc_draw_windows()")
+-- Register ImGui callback (MUST use do_on_draw!)
+do_on_draw("vatc_draw_windows()")
 
 -- ============================================================================
 -- INIT
