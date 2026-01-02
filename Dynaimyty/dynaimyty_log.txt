@@ -1,5 +1,0 @@
-2024-08-07 19:55:48 - INFO: Starting the script
-2024-08-07 19:55:48 - INFO: Last intervention timestamp: 2024-08-07 15:49:16
-2024-08-07 19:55:48 - INFO: State loaded from Resources/plugins/FlyWithLua/Scripts/Dynaimyty/dynaimyty.ini
-2024-08-07 19:55:48 - INFO: Script started successfully
-2024-08-07 19:55:48 - INFO: Entering main loop
