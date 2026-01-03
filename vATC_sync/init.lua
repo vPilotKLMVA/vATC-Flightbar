@@ -394,17 +394,16 @@ end
 -- ============================================================================
 local function extract_xml(content, tag)
     if not content or not tag then return nil end
-    local pattern = "<" .. tag .. ">([^<]*)</" .. tag .. ">"
+    local pattern = "<" .. tag .. ">( [^<]*)</" .. tag .. ">"
     local val = content:match(pattern)
     if val and val ~= "" then return val end
     return nil
 end
 
--- Extract from nested XML (SimBrief OFP format)
 local function extract_xml_nested(content, parent, tag)
     if not content or not parent or not tag then return nil end
     -- Find parent section first
-    local parent_pattern = "<" .. parent .. ">(.-)</" .. parent .. ">"
+    local parent_pattern = "<" .. parent .. ">(. -)</" .. parent .. ">"
     local parent_content = content:match(parent_pattern)
     if parent_content then
         return extract_xml(parent_content, tag)
@@ -924,7 +923,7 @@ function vatc_draw_bar()
     -- Header row (optional) - ENHANCED with METAR QNH and Step Climb
     if CONFIG.show_header_row then
         imgui.PushStyleColor(imgui.constant.Col.Text, COL_HEADER)
-        imgui.TextUnformatted("DEP      Callsign   ATC    Freq       Gate  SID      RWY   SQWK  QNH   METAR TA/RA ETD     Dist  | FIR          sFL   Next      ToGo  | ATC  ETA     QNH   METAR Temp  Wind      STAR     APP   ARR")
+        imgui.TextUnformatted("DEP      Callsign   ATC    Freq       Gate  SID      RWY   SQWK  QNH   METAR-QNH  TA  ETD     Dist  |  FIR:Freq      sFL   NextATC   ToGo  |  ARR  ETA     QNH   METAR Temp  Wind")
         imgui.PopStyleColor()
     end
 
