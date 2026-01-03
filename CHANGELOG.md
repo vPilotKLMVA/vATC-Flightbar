@@ -2,6 +2,20 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v1.4.6] - 2026-01-03
+
+### Fixed
+- **CRITICAL**: Fixed incorrect FlyWithLua callback - was still using `do_every_draw()` instead of `do_on_draw()`
+- Fixed METAR QNH columns not being populated in display (dep_metar_qnh, arr_metar_qnh now show actual METAR data)
+- Fixed log file naming - now uses "vATC_Log.txt" consistently (was "vATClog.log")
+
+### Technical Details
+- Line 1128: Changed `do_every_draw()` to `do_on_draw()` (FlyWithLua NG+ requirement)
+- Lines 690, 702: Added proper METAR QNH extraction to draw cache
+- Lines 21, 24: Updated log file path to "vATC_Log.txt"
+
+---
+
 ## [v1.4.5] - 2026-01-02
 
 ### Fixed
@@ -93,7 +107,8 @@ All notable changes to this project will be documented in this file.
 
 | Version | Date | Status | Notes |
 |---------|------|--------|-------|
-| v1.4.5 | 2026-01-02 | ✅ Current | Fixed FlyWithLua NG+ compatibility |
+| v1.4.6 | 2026-01-03 | ✅ Current | Complete repair - METAR QNH, callbacks, logging |
+| v1.4.5 | 2026-01-02 | ⚠️ Partial | Incomplete callback fix |
 | v1.4.4 | 2026-01-02 | ⚠️ Broken | Wrong ImGui callback function |
 | v1.4.3 | 2026-01-02 | ⚠️ Broken | Fixed files, but wrong callback |
 | v1.4.2 | 2026-01-02 | ⚠️ Broken | Missing version.lua file |

@@ -11,8 +11,8 @@
 local VERSION = {
     major = 1,
     minor = 4,
-    patch = 5,
-    build = "2026.01.02",
+    patch = 6,
+    build = "2026.01.03",
 
     get = function(self)
         return string.format("v%d.%d.%d", self.major, self.minor, self.patch)

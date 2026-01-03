@@ -1,6 +1,6 @@
 # vATC Sync for X-Plane 12
 
-[![Version](https://img.shields.io/badge/version-1.4.5-blue.svg)](https://github.com/vPilotKLMVA/-LuaScripts-for-X-Plane-12)
+[![Version](https://img.shields.io/badge/version-1.4.6-blue.svg)](https://github.com/vPilotKLMVA/-LuaScripts-for-X-Plane-12)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![X-Plane](https://img.shields.io/badge/X--Plane-12-orange.svg)](https://www.x-plane.com/)
 
@@ -38,7 +38,7 @@
    - Extract to `X-Plane 12/Resources/plugins/`
 2. **Install vATC Sync**
    - Copy `vATC_sync/` folder to `FlyWithLua/Scripts/`
-   - Copy `vATC_v1.4.5.lua` to `FlyWithLua/Scripts/`
+   - Copy `vATC_v1.4.6.lua` to `FlyWithLua/Scripts/`
 3. **Configure SimBrief**
    - Start X-Plane and open vATC Settings
    - Enter your SimBrief Pilot ID
